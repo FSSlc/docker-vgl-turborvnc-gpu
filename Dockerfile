@@ -50,6 +50,7 @@ COPY docker /opt/container
 
 RUN chmod +x /opt/container/*.sh \
     /opt/container/install-runtime.sh \
+ && /opt/container/install-runtime.sh \
  && rm -rf /tmp/artifacts
 
 WORKDIR /root

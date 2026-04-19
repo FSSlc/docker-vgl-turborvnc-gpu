@@ -1,4 +1,4 @@
-# docker-vgl-turborvnc-gpu
+# docker-vgl-turbovnc-gpu
 
 单一 `Dockerfile` 构建完整 Linux 桌面容器，默认使用最小化 XFCE，并通过 TurboVNC 自带 WebSocket/noVNC 集成直接暴露浏览器访问入口。容器内只使用 `root` 用户。
 

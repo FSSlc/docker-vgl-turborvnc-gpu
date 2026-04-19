@@ -38,14 +38,12 @@ install_debian_family() {
     gnupg
 
   # 添加 VirtualGL 仓库
-  curl -fsSL "${VIRTUALGL_REPO_BASE}/gpgkey" | gpg --dearmor -o /usr/share/keyrings/virtualgl-archive-keyring.gpg
-  echo "deb [signed-by=/usr/share/keyrings/virtualgl-archive-keyring.gpg] ${VIRTUALGL_REPO_BASE}/${ID} ${VERSION_CODENAME} main" \
-    > /etc/apt/sources.list.d/virtualgl.list
+  curl -fsSL "${VIRTUALGL_REPO_BASE}/gpgkey" | gpg --dearmor >/etc/apt/trusted.gpg.d/VirtualGL.gpg
+  curl -fsSL https://raw.githubusercontent.com/VirtualGL/repo/main/VirtualGL.list -o /etc/apt/sources.list.d/VirtualGL.list
 
   # 添加 TurboVNC 仓库
-  curl -fsSL "${TURBOVNC_REPO_BASE}/gpgkey" | gpg --dearmor -o /usr/share/keyrings/turbovnc-archive-keyring.gpg
-  echo "deb [signed-by=/usr/share/keyrings/turbovnc-archive-keyring.gpg] ${TURBOVNC_REPO_BASE}/${ID} ${VERSION_CODENAME} main" \
-    > /etc/apt/sources.list.d/turbovnc.list
+  curl -fsSL "${TURBOVNC_REPO_BASE}/gpgkey" | gpg --dearmor >/etc/apt/trusted.gpg.d/TurboVNC.gpg
+  curl -fsSL https://raw.githubusercontent.com/TurboVNC/repo/main/TurboVNC.list -o /etc/apt/sources.list.d/TurboVNC.list
 
   # 更新并安装
   apt-get update
@@ -80,12 +78,12 @@ install_rhel_family() {
     repo_version="${VERSION_ID}"
   fi
 
-  curl -fsSL "${VIRTUALGL_REPO_BASE}/${repo_base}/${repo_version}/virtualgl.repo" \
-    -o /etc/yum.repos.d/virtualgl.repo
+  curl -fsSL https://raw.githubusercontent.com/VirtualGL/repo/main/VirtualGL.repo \
+    -o /etc/yum.repos.d/VirtualGL.repo
 
   # 添加 TurboVNC 仓库
-  curl -fsSL "${TURBOVNC_REPO_BASE}/${repo_base}/${repo_version}/turbovnc.repo" \
-    -o /etc/yum.repos.d/turbovnc.repo
+  curl -fsSL https://raw.githubusercontent.com/TurboVNC/repo/main/TurboVNC.repo \
+    -o /etc/yum.repos.d/TurboVNC.repo
 
   # Rocky/Alma 需要 EPEL,Fedora 不需要
   if [[ "${ID}" != "fedora" ]]; then
