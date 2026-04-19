@@ -94,13 +94,19 @@ install_rhel_family() {
       dnf config-manager --set-enabled powertools 2>/dev/null || true
   fi
 
+  # RHEL 8 系列仓库中没有 mesa-demos 包
+  local extra_rhel_packages=()
+  if [[ "${VERSION_ID%%.*}" != "8" ]]; then
+    extra_rhel_packages+=(mesa-demos)
+  fi
+
   # 安装软件包 (所有 RHEL 系列通用)
   dnf -y install \
     ca-certificates \
     dbus-x11 \
     dejavu-sans-fonts \
     fontconfig \
-    mesa-demos \
+    "${extra_rhel_packages[@]}" \
     mesa-libEGL \
     mesa-libGL \
     mesa-libGLU \
