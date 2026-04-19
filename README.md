@@ -13,60 +13,86 @@
 
 - `ubuntu2404`
 - `ubuntu2204`
-- `debian12`
+- `debian13`
 - `rocky9`
 
 ## 目录
 
-- `Dockerfile`: 统一多阶段构建入口
+- `Dockerfile`: 统一多阶段构建入口 (支持多架构)
 - `docker/entrypoint.sh`: 容器入口
 - `docker/vnc-start.sh`: TurboVNC/noVNC 启动器
 - `docker/xfce-session.sh`: XFCE 会话包装器
+- `docker/install-runtime.sh`: 发行版包安装 (使用官方 YUM/APT 仓库,支持多架构)
 - `tests/smoke-contract.sh`: 交付面 smoke 校验
-- `docker/install-runtime.sh`: 发行版包安装和 GitHub Release 安装包落地
+- `tests/integration-test.sh`: 集成测试
+- `tests/test-all-distros.sh`: 所有发行版测试
+- `.github/workflows/`: GitHub Actions 工作流 (多架构构建)
+- `.github/ACTIONS.md`: GitHub Actions 使用指南
 
 ## 上游来源
 
-- TurboVNC: 通过官方 GitHub Release 安装 `.deb` / `.rpm`
-- VirtualGL: 通过官方 GitHub Release 安装 `.deb` / `.rpm`
-- noVNC: 通过官方 GitHub 源码归档引入静态页面
+- **VirtualGL**: 通过官方 PackageCloud YUM/APT 仓库安装
+  - Debian/Ubuntu: https://packagecloud.io/dcommander/virtualgl
+  - RHEL/Rocky/Alma/Fedora: https://packagecloud.io/dcommander/virtualgl
+- **TurboVNC**: 通过官方 PackageCloud YUM/APT 仓库安装
+  - Debian/Ubuntu: https://packagecloud.io/dcommander/turbovnc
+  - RHEL/Rocky/Alma/Fedora: https://packagecloud.io/dcommander/turbovnc
+- **noVNC**: 通过官方 GitHub 源码归档引入静态页面
 
 ## 构建
 
-Ubuntu 24.04:
+### Debian 系列
 
+**Ubuntu 24.04 (推荐):**
 ```bash
-docker build \
-  -t vgl-desktop:ubuntu2404 \
-  --build-arg BASE_DISTRO=ubuntu2404 \
-  .
+docker build -t vgl-desktop:ubuntu2404 --build-arg BASE_DISTRO=ubuntu2404 .
 ```
 
-Ubuntu 22.04:
-
+**Ubuntu 22.04:**
 ```bash
-docker build \
-  -t vgl-desktop:ubuntu2204 \
-  --build-arg BASE_DISTRO=ubuntu2204 \
-  .
+docker build -t vgl-desktop:ubuntu2204 --build-arg BASE_DISTRO=ubuntu2204 .
 ```
 
-Debian 12:
-
+**Debian 13:**
 ```bash
-docker build \
-  -t vgl-desktop:debian12 \
-  --build-arg BASE_DISTRO=debian12 \
-  .
+docker build -t vgl-desktop:debian13 --build-arg BASE_DISTRO=debian13 .
 ```
 
-Rocky 9:
-
+**Debian 12:**
 ```bash
-docker build \
-  -t vgl-desktop:rocky9 \
-  --build-arg BASE_DISTRO=rocky9 \
-  .
+docker build -t vgl-desktop:debian12 --build-arg BASE_DISTRO=debian12 .
+```
+
+### RHEL 系列
+
+**Rocky Linux 9:**
+```bash
+docker build -t vgl-desktop:rocky9 --build-arg BASE_DISTRO=rocky9 .
+```
+
+**Rocky Linux 8:**
+```bash
+docker build -t vgl-desktop:rocky8 --build-arg BASE_DISTRO=rocky8 .
+```
+
+**AlmaLinux 9:**
+```bash
+docker build -t vgl-desktop:alma9 --build-arg BASE_DISTRO=alma9 .
+```
+
+**AlmaLinux 8:**
+```bash
+docker build -t vgl-desktop:alma8 --build-arg BASE_DISTRO=alma8 .
+```
+
+**Fedora 40:**
+```bash
+docker build -t vgl-desktop:fedora40 --build-arg BASE_DISTRO=fedora40 .
+```
+
+**Fedora 39:**
+```bash
+docker build -t vgl-desktop:fedora39 --build-arg BASE_DISTRO=fedora39 .
 ```
 
 ## 宿主机准备

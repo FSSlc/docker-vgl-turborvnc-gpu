@@ -1,0 +1,148 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      distros:
+        description: 'Distros to build (comma-separated, or "all")'
+        required: false
+        default: 'all'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=$(git rev-parse --short HEAD)
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+
+      - name: Set build matrix
+        id: set-matrix
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.distros }}" != "all" ]]; then
+            # 手动触发时使用指定的发行版
+            DISTROS="${{ github.event.inputs.distros }}"
+            MATRIX=$(echo "${DISTROS}" | jq -R 'split(",") | map({distro: .})')
+          else
+            # 默认构建所有发行版
+            MATRIX='[
+              {"distro": "ubuntu2404", "priority": "high"},
+              {"distro": "ubuntu2204", "priority": "high"},
+              {"distro": "ubuntu2004", "priority": "low"},
+              {"distro": "debian13", "priority": "high"},
+              {"distro": "debian12", "priority": "low"},
+              {"distro": "rocky9", "priority": "high"},
+              {"distro": "rocky8", "priority": "low"},
+              {"distro": "alma9", "priority": "high"},
+              {"distro": "alma8", "priority": "low"},
+              {"distro": "fedora40", "priority": "medium"},
+              {"distro": "fedora39", "priority": "low"}
+            ]'
+          fi
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+          echo "Build matrix: ${MATRIX}"
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ matrix.distro }}-latest
+            type=raw,value=${{ matrix.distro }}-${{ needs.prepare.outputs.version }}
+            type=raw,value=${{ matrix.distro }}-{{sha}}
+          labels: |
+            org.opencontainers.image.title=VGL Desktop ${{ matrix.distro }}
+            org.opencontainers.image.description=Docker VirtualGL + TurboVNC + GPU Support on ${{ matrix.distro }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          build-args: |
+            BASE_DISTRO=${{ matrix.distro }}
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.distro }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.distro }}
+
+      - name: Test image
+        if: github.event_name != 'pull_request'
+        run: |
+          docker run --rm \
+            -e VNC_PASSWORD=testpass123 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.distro }}-latest \
+            /opt/TurboVNC/bin/vncserver -version
+
+  summary:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check build results
+        run: |
+          if [[ "${{ needs.build.result }}" == "success" ]]; then
+            echo "✅ All images built successfully!"
+            echo "Version: ${{ needs.prepare.outputs.version }}"
+            echo "Registry: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          else
+            echo "❌ Some builds failed"
+            exit 1
+          fi

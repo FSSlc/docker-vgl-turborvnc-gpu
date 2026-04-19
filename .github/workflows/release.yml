@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --abbrev=0 --tags $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
+          if [[ -n "${PREVIOUS_TAG}" ]]; then
+            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s" --no-merges)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges)
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "${CHANGELOG}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## Docker VirtualGL + TurboVNC + GPU Support
+
+            ### Version ${{ steps.version.outputs.version }}
+
+            #### Supported Distributions
+
+            **Debian Family:**
+            - Ubuntu 24.04 LTS, 22.04 LTS
+            - Debian 13, 12
+
+            **RHEL Family:**
+            - Rocky Linux 9, 8
+            - AlmaLinux 9, 8
+            - Fedora 40, 39
+
+            #### Usage
+
+            ```bash
+            # Pull image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:ubuntu2404-${{ steps.version.outputs.version }}
+
+            # Run container
+            docker run -d \
+              --name vgl-desktop \
+              --device /dev/dri \
+              -e VNC_PASSWORD=your_password \
+              -p 5901:5901 \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:ubuntu2404-${{ steps.version.outputs.version }}
+            ```
+
+            #### Available Tags
+
+            For each distribution:
+            - `{distro}-latest` - Latest build
+            - `{distro}-${{ steps.version.outputs.version }}` - This release
+            - `{distro}-{sha}` - Specific commit
+
+            Example: `ubuntu2404-latest`, `debian12-${{ steps.version.outputs.version }}`, `rocky9-latest`
+
+            #### Changes
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            #### Documentation
+
+            - [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
+            - [DISTROS.md](https://github.com/${{ github.repository }}/blob/main/DISTROS.md)
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update latest tag
+        run: |
+          git tag -f latest
+          git push -f origin latest
