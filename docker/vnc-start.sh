@@ -48,7 +48,6 @@ args=(
   -depth "${VNC_DEPTH}"
   -wm xfce
   -novnc "${VNC_NOVNC_DIR}"
-  -localhost no
 )
 
 if [[ -n "${VNC_EXTRA_ARGS:-}" ]]; then

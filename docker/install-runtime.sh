@@ -55,6 +55,8 @@ install_debian_family() {
     libglu1-mesa \
     mesa-utils \
     procps \
+    perl \
+    vim \
     x11-xserver-utils \
     xauth \
     xfce4 \
@@ -111,6 +113,8 @@ install_rhel_family() {
     mesa-libGL \
     mesa-libGLU \
     procps-ng \
+    perl \
+    vim \
     thunar \
     xauth \
     xfce4-panel \
